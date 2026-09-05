@@ -77,8 +77,9 @@ emotion-detector/
 │   ├── emotion_classifier.py # EmotionClassifier - loads the trained
 │   │                          #   model and labels a face crop in real time
 │   └── emotion_model.py # build_model - small CNN or ResNet-18 classifier
-├── models/              # Trained weights + evaluation artifacts (gitignored)
-├── dataset/             # FER-2013 CSV + prepared train/test data (gitignored)
+├── models/              # Trained checkpoints + eval artifacts (weights are
+│                        #   committed so the app runs without training)
+├── dataset/             # FER-2013 CSV + prepared data (gitignored)
 ├── captures/            # Snapshots, recordings and mood CSVs (gitignored)
 └── tests/               # pytest suite (dataset, train, tracking, main, classifier)
 ```
@@ -135,8 +136,8 @@ notorious angry-vs-sad confusion from printing confident wrong answers. Labels
 also follow the **person**, not the box: `src/tracking.py` matches faces with
 IoU so two faces side by side keep their own emotions.
 
-If `models/emotion_cnn.pt` is missing (no model trained yet), the demo still
-runs but only draws the face rectangles and a "(no emotion model)" note.
+If `models/emotion_cnn.pt` is missing (deleted or a partial clone), the demo
+still runs but only draws the face rectangles and a "(no emotion model)" note.
 
 Extra options:
 

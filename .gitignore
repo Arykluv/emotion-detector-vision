@@ -43,3 +43,7 @@ captures/**
 *.pt
 *.pth
 *.onnx
+
+# ...except the trained checkpoints: they ship with the repo so the app
+# runs without days of training (dataset/ arrays stay excluded).
+!models/*.pt
