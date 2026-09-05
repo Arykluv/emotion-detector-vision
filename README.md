@@ -6,9 +6,10 @@ sad / surprise / neutral) with a CNN trained in PyTorch on the FER-2013 dataset.
 
 > Status: the demo runs in real time against all **seven** FER-2013 emotions
 > with multi-face tracking, a rolling session mood log and recording hotkeys.
-> The current `models/emotion_cnn.pt` is the 3-class ResNet-18 (**81.15%**);
-> a 7-class retrain is next, then self-calibration on your own webcam face
-> (see [Live demo](#1-live-webcam-demo) and [Self-calibration](#5-self-calibration-on-your-own-face)).
+> Baseline: ImageNet-pretrained ResNet-18 **66.02% test accuracy** on the
+> seven classes, and a model fine-tuned on your own webcam face is ready at
+> `models/emotion_cnn_calibrated.pt` (see [Live demo](#1-live-webcam-demo)
+> and [Self-calibration](#5-self-calibration-on-your-own-face)).
 
 ## Pipeline
 
@@ -167,7 +168,7 @@ evaluates on the held-out test set, and saves:
 
 The default is **ImageNet-pretrained ResNet-18** with class-weighted loss,
 label smoothing, data augmentation and a warmup/cosine learning-rate schedule
-— the recipe that lifts test accuracy into the ~80% range. Notable options:
+— the recipe behind the 66% seven-class baseline. Notable options:
 
 ```bash
 python train_model.py                 # recommended: resnet18 + pretrained
@@ -177,14 +178,10 @@ python train_model.py --label-smoothing 0      # disable label smoothing
 ```
 
 Common options: `--epochs`, `--batch-size`, `--lr`, `--seed` (all seeded by
-default for reproducibility).
-
-> **Re-run the baseline:** the checkpoint in `models/emotion_cnn.pt` was
-> trained on the old 3-class subset (81.15%). The dataset now contains all
-> seven emotions — after a `python train_model.py` retrain, the fresh metrics
-> land in `models/emotion_cnn_evaluation.txt` and
-> `models/emotion_cnn_confusion_matrix.md`; paste them into the
-> [Model evaluation](#model-evaluation-results) tables below.
+default for reproducibility). The current `models/emotion_cnn.pt` was
+retrained on the **seven-class** dataset (66.02% test accuracy); the fresh
+metrics live in `models/emotion_cnn_evaluation.txt` and
+`models/emotion_cnn_confusion_matrix.md`.
 
 ### 4. Run the tests
 
@@ -216,6 +213,10 @@ python main.py --model models/emotion_cnn_calibrated.pt
 Collect ~100+ samples per emotion so the fine-tune has enough to work with.
 The custom set must be collected with the same base model (or the default)
 so the class order matches.
+
+> A calibration run has already been done for this machine — a fine-tuned
+> checkpoint is available at `models/emotion_cnn_calibrated.pt`, so you can
+> skip straight to `python main.py --model models/emotion_cnn_calibrated.pt`.
 
 ### 6. Build a standalone executable
 
@@ -256,7 +257,7 @@ applied on every training batch to help the model generalise.
   ImageNet-pretrained weights, adapted to 48×48 grayscale input (the input
   convolution's filters are averaged over the RGB channels, and the final
   layer is replaced with an N-way output matching the class count). ~11M
-  parameters; the accuracy upgrade behind the 81% test score.
+  parameters; the accuracy upgrade behind the baseline test score.
 * **`cnn` (original)** — the small hand-built network shown below. ~1.3M
   parameters; kept for comparison and CPU speed.
 
@@ -284,47 +285,54 @@ overfitting, which is important because FER-2013 is relatively small.
 
 ## Model evaluation results
 
-> **These are the PREVIOUS 3-class numbers** (test set 3,979 images). The
-> dataset is now 7-class; the retrained baseline will be pasted here after the
-> next `python train_model.py` run (7,178 test images).
-
-Results on the held-out FER-2013 test set (3,979 images), reproduced with
-`python train_model.py --seed 42` on the old 3-class subset. The checkpoint is
-the **ImageNet-pretrained ResNet-18** with class weighting, label smoothing
-and augmentation. Full details are in `models/emotion_cnn_evaluation.txt`.
+Results on the held-out FER-2013 test set (7,178 images), reproduced with
+`python train_model.py --seed 42` on the **seven-class** dataset. The
+checkpoint is the **ImageNet-pretrained ResNet-18** with class weighting,
+label smoothing, augmentation and a warmup/cosine schedule. Full details are
+in `models/emotion_cnn_evaluation.txt`.
 
 | Metric        | Value   |
 | ------------- | ------- |
-| Test accuracy | 81.15%  |
-| Test loss     | 0.5317  |
+| Test accuracy | 66.02%  |
+| Test loss     | 1.2527  |
 
 Per-class metrics (class order follows `dataset/prepared/class_names.npy`):
 
-| Class | Precision | Recall | F1     |
-| ----- | --------- | ------ | ------ |
-| angry | 0.7230    | 0.6921 | 0.7072 |
-| happy | 0.9288    | 0.8754 | 0.9013 |
-| sad   | 0.7288    | 0.8123 | 0.7683 |
+| Class    | Precision | Recall | F1     |
+| -------- | --------- | ------ | ------ |
+| angry    | 0.5885    | 0.5866 | 0.5876 |
+| disgust  | 0.4969    | 0.7117 | 0.5852 |
+| fear     | 0.5213    | 0.5020 | 0.5114 |
+| happy    | 0.8498    | 0.8546 | 0.8522 |
+| sad      | 0.5389    | 0.5060 | 0.5219 |
+| surprise | 0.7978    | 0.7882 | 0.7930 |
+| neutral  | 0.6006    | 0.6342 | 0.6170 |
 
-`happy` remains the easiest class; class weighting roughly **doubled angry
-recall** (0.35 → 0.69) versus the original small CNN, with only a small loss
-on the other classes' precision.
+`happy` and `surprise` stay the easiest classes; `disgust` has high recall
+(0.71) because it is an all-or-nothing class in the raw data (only ~111 test
+images) — its low precision (0.50) shows the model over-predicts it. The
+facial-expression confusers `sad` / `angry` / `neutral` sit around 0.5–0.6 F1.
 
 ## Confusion matrix
 
-Rows = true label, columns = predicted label on the **old 3-class subset**
-(generated by `train_model.py`, stored in
-`models/emotion_cnn_confusion_matrix.md`):
+Rows = true label, columns = predicted label (generated by `train_model.py`,
+stored in `models/emotion_cnn_confusion_matrix.md`):
 
-|             | angry | happy | sad |
-| ----------- | ----- | ----- | --- |
-| angry (true) | 663 | 40  | 255 |
-| happy (true) | 99  | 1553 | 122 |
-| sad (true)   | 155 | 79  | 1013 |
+| (true \\ pred)   | angry | disgust | fear | happy | sad | surprise | neutral |
+| ---------------- | ----- | ------- | ---- | ----- | --- | -------- | ------- |
+| angry            | 562   | 21      | 117  | 37    | 107 | 18       | 96      |
+| disgust          | 20    | 79      | 2    | 0     | 5   | 2        | 3       |
+| fear             | 100   | 11      | 514  | 40    | 176 | 72       | 111     |
+| happy            | 42    | 8       | 33   | 1516  | 48  | 39       | 88      |
+| sad              | 138   | 22      | 163  | 72    | 631 | 17       | 204     |
+| surprise         | 19    | 4       | 82   | 33    | 20  | 655      | 18      |
+| neutral          | 74    | 14      | 75   | 86    | 184 | 18       | 782     |
 
-`angry` still leaks toward `sad` (255 of the 958 angry samples) — a classic
-FER-2013 weakness — but the previous 488-sample leak was roughly halved by
-class weighting.
+`sad` leaks toward `neutral` (204), `angry` and `fear` (138 / 163) — the
+classic FER-2013 confusion pattern; `fear` similarly spills into `sad` (176)
+and `neutral` (111). Class weighting correctly avoids crushing tiny `disgust`
+(only 111 test samples), but its low precision means many other classes'
+samples get pulled in.
 
 ## Reproducing the training
 
@@ -366,9 +374,9 @@ Point-to-point requirements for identical results:
 * **Confusable classes** — `sad` and `angry` share many facial patterns;
   webcam lighting further shifts the distribution away from FER-2013 (this is
   exactly why `calibrate.py` exists).
-* **Harder problem:** 7 classes are harder than 3 — expect the 7-class test
-  accuracy to sit below the 81% you got on the easy subset, per-class `disgust`
-  recall in particular will trail the others.
+* **Harder problem:** 7-class accuracy (66%) is well below the 81% the easy
+  3-class subset reached; `disgust` keeps a high recall precisely because it
+  is rare — the model over-predicts it, which drags its precision down to 0.50.
 * **Self-calibration helps but is not night-vision** — fine-tuning on your own
   face lifts label quality substantially on your own camera, but accuracy on
   any single frame is still far too low for monitoring, screening or other
@@ -403,6 +411,7 @@ Point-to-point requirements for identical results:
 * ~~Self-calibration fine-tuning on your own face~~ (done)
 * ~~Real pytest suite~~ (done)
 * ~~PyInstaller packaging~~ (done)
-* 7-class baseline retrain + refreshed README accuracy tables (pending)
+* ~~7-class baseline retrain (66.02% test accuracy)~~ (done)
+* ~~Calibration run on this machine~~ (done)
 * Optional: validation-tuned confidence thresholds, expression-duration
   analytics from the mood log
