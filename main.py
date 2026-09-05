@@ -38,6 +38,7 @@ import cv2  # OpenCV library for computer vision
 from src.camera import CameraFeed
 from src.emotion_classifier import EmotionClassifier
 from src.face_detector import FaceDetector
+from src.gesture import WaveDetector
 from src.tracking import FaceTracker
 
 WINDOW_NAME = "Emotion Detector"
@@ -172,6 +173,13 @@ def parse_args():
         default=True,
         help="Disable test-time augmentation (mirror averaging) at run time.",
     )
+    parser.add_argument(
+        "--no-wave-close",
+        action="store_false",
+        dest="wave_close",
+        default=True,
+        help="Disable 'wave to close' gesture detection.",
+    )
     return parser.parse_args()
 
 
@@ -228,9 +236,10 @@ def main():
     video_writer = None  # active cv2.VideoWriter, or None while idle
     fps = 0.0
     last_time = time.perf_counter()
+    wave_detector = WaveDetector()
 
     print("Keys: q quit | s snapshot | r record | c mood CSV")
-    print("Webcam opened successfully. Press 'q' to quit.")
+    print("Wave to close the app is enabled. Press 'q' to quit.")
     try:
         frame_index = 0
         while True:
@@ -245,6 +254,22 @@ def main():
 
             # Grayscale once per frame, reused for detection and classification
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+            # Wave-to-close: optical flow on a half-res copy; a waving hand
+            # flips the dominant horizontal flow direction repeatedly.
+            if args.wave_close:
+                wave_gray = cv2.resize(
+                    gray, None, fx=0.5, fy=0.5, interpolation=cv2.INTER_AREA
+                )
+                if wave_detector.update(wave_gray):
+                    cv2.putText(
+                        frame, "Wave detected - closing.", (10, 90),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2,
+                    )
+                    cv2.imshow(WINDOW_NAME, frame)
+                    cv2.waitKey(400)
+                    print("Wave detected - closing the app.")
+                    break
 
             # Detect faces on a half-resolution copy; boxes are scaled back
             faces = detector.detect(frame, gray=gray, scale=DETECT_SCALE)
@@ -291,6 +316,12 @@ def main():
                 cv2.putText(
                     frame, "REC", (frame.shape[1] - 90, 60),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2,
+                )
+            # Reminder of the wave-to-close gesture (bottom-left)
+            if args.wave_close:
+                cv2.putText(
+                    frame, "Wave to close", (10, frame.shape[0] - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1,
                 )
 
             # Recording: write the processed (labelled) frame to disk

@@ -44,6 +44,8 @@ Webcam ──► OpenCV ──► Haar Cascade face detection ──► CNN emot
   half-resolution detection + batching every 3rd frame
 * **Hotkeys:** `q` quit · `s` save a snapshot · `r` record/stop an AVI ·
   `c` dump the mood log
+* **Wave to close** — wave at the camera (≈1.5 s of reversing horizontal
+  motion) and the app closes itself; `--no-wave-close` disables it
 * Clean release of the camera, windows and any open recording on exit
 * Selectable camera index, detector strictness, model path and TTA from the
   command line
@@ -71,6 +73,7 @@ emotion-detector/
 │   ├── camera.py        # CameraFeed - webcam capture wrapper
 │   ├── face_detector.py # FaceDetector - Haar Cascade face detection
 │   ├── tracking.py      # FaceTracker - IoU multi-face tracking
+│   ├── gesture.py       # WaveDetector - wave-to-close optical flow gesture
 │   ├── emotion_classifier.py # EmotionClassifier - loads the trained
 │   │                          #   model and labels a face crop in real time
 │   └── emotion_model.py # build_model - small CNN or ResNet-18 classifier
@@ -119,7 +122,10 @@ q  quit              r  start / stop recording (AVI)
 s  save a snapshot   c  dump the session mood log to CSV
 ```
 
-Snapshots, recordings and mood logs land in `captures/<session>/`. Press `q`
+Snapshots, recordings and mood logs land in `captures/<session>/`. Wave at
+the camera for about a second and a half and the app will **close itself**
+(an optical-flow detector in `src/gesture.py` counts how often the dominant
+horizontal motion changes direction — no extra dependencies). Press `q`
 to exit.
 
 The app refuses to guess: labels only appear after the model has agreed across
@@ -139,6 +145,7 @@ python main.py --camera 1                      # use the second webcam
 python main.py --min-neighbors 8               # stricter detector (fewer false positives)
 python main.py --model path/to/model.pt        # use another trained checkpoint
 python main.py --no-tta                        # disable mirror-averaging at run time
+python main.py --no-wave-close                 # disable the wave-to-close gesture
 ```
 
 ### 2. Prepare the dataset

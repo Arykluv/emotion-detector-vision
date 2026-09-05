@@ -50,4 +50,5 @@ def test_parse_args_defaults(monkeypatch, capsys):
     args = app.parse_args()
     assert args.camera == 0
     assert args.tta is True
+    assert args.wave_close is True
     assert args.min_neighbors == 5
