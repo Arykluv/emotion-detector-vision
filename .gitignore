@@ -1,0 +1,45 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE / editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Project data (large files are not committed)
+models/*
+!models/.gitkeep
+!models/*.md
+!models/*.txt
+dataset/*
+!dataset/.gitkeep
+
+# App captures (snapshots / recordings / mood CSVs)
+captures/**
+!captures/.gitkeep
+
+# Test caches
+.pytest_cache/
+
+# Torch / model artifacts
+*.pt
+*.pth
+*.onnx

@@ -1,0 +1,11 @@
+# Computer vision (webcam feed + Haar Cascade face detection)
+opencv-python==4.11.0.86
+
+# Deep learning framework (CPU build is enough for this project's small CNN)
+torch==2.13.0
+
+# Torchvision: ResNet-18 backbone (pretrained ImageNet weights) + transforms
+torchvision==0.28.0
+
+# Numerical arrays (dependency of both OpenCV and PyTorch)
+numpy==2.5.2
